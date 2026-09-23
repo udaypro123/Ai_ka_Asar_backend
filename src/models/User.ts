@@ -1,0 +1,117 @@
+import mongoose, { Schema, Document } from 'mongoose';
+import bcrypt from 'bcrypt';
+import { RoleType } from './Role';
+
+export interface IUser extends Document {
+  name: string;
+  email: string;
+  password: string;
+  country?: string;
+  profession?: string;
+  industry?: string;
+  experience?: string;
+  employmentStatus?: string;
+  skills?: string[];
+  careerGoal?: string;
+  aiUsage?: string;
+  aiImpactStatus?: string;
+  isEmailVerified: boolean;
+  roles: RoleType[];
+  comparePassword(candidatePassword: string): Promise<boolean>;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const UserSchema = new Schema<IUser>(
+  {
+    name: {
+      type: String,
+      required: [true, 'Name is required'],
+      trim: true,
+    },
+    email: {
+      type: String,
+      required: [true, 'Email is required'],
+      unique: true,
+      lowercase: true,
+      trim: true,
+      match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email'],
+    },
+    password: {
+      type: String,
+      required: [true, 'Password is required'],
+      minlength: [6, 'Password must be at least 6 characters'],
+      select: false,
+    },
+    country: {
+      type: String,
+      trim: true,
+    },
+    profession: {
+      type: String,
+      trim: true,
+    },
+    industry: {
+      type: String,
+      trim: true,
+    },
+    experience: {
+      type: String,
+      trim: true,
+    },
+    employmentStatus: {
+      type: String,
+      trim: true,
+    },
+    skills: {
+      type: [String],
+      default: [],
+    },
+    careerGoal: {
+      type: String,
+      trim: true,
+    },
+    aiUsage: {
+      type: String,
+      trim: true,
+    },
+    aiImpactStatus: {
+      type: String,
+      trim: true,
+    },
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    roles: {
+      type: [String],
+      enum: ['USER', 'ADMIN', 'SUPER_ADMIN'],
+      default: ['USER'],
+    },
+  },
+  {
+    timestamps: true,
+    collection: 'users',
+  }
+);
+
+UserSchema.pre<IUser>('save', async function (next) {
+  if (!this.isModified('password')) return next();
+  if (!this.password) return next();
+  const salt = await bcrypt.genSalt(12);
+  this.password = await bcrypt.hash(this.password, salt);
+  next();
+});
+
+UserSchema.methods.comparePassword = async function (candidatePassword: string): Promise<boolean> {
+  return bcrypt.compare(candidatePassword, this.password);
+};
+
+UserSchema.set('toJSON', {
+  transform: (_doc, ret) => {
+    delete ret.password;
+    return ret;
+  },
+});
+
+export const User = mongoose.model<IUser>('User', UserSchema);
