@@ -1,22 +1,23 @@
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { User } from '../models/User';
 import { RefreshToken } from '../models/RefreshToken';
 import { env } from '../config/env';
 import { AppError } from '../utils/appError';
 
-export const registerUser = async (data: { name: string; email: string; password: string }) => {
+export const registerUser = async (data: { name: string; email: string; password: string; role?: string }) => {
   const existingUser = await User.findOne({ email: data.email });
   if (existingUser) {
     throw new AppError('Email already registered', 409, 'EMAIL_EXISTS');
   }
 
+  const role = data.role === 'HR' ? 'HR' : 'USER';
   const user = await User.create({
     name: data.name,
     email: data.email,
     password: data.password,
-    roles: ['USER'],
+    roles: [role],
   });
 
   const { accessToken, refreshToken } = generateTokens(user._id.toString());

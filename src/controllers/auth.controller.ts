@@ -6,8 +6,8 @@ import * as authService from '../services/auth.service';
 
 export const register = asyncHandler(async (req: AuthRequest, res: Response) => {
   console.log("resister function enter ", req.body)
-  const { name, email, password } = req.body;
-  const result = await authService.registerUser({ name, email, password });
+  const { name, email, password, role } = req.body;
+  const result = await authService.registerUser({ name, email, password, role });
   res.status(201).json({
     success: true,
     message: 'User registered successfully',

@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export type RoleType = 'USER' | 'ADMIN' | 'SUPER_ADMIN';
+export type RoleType = 'USER' | 'ADMIN' | 'SUPER_ADMIN' | 'HR';
 
 export interface IRole extends Document {
   name: RoleType;
@@ -13,7 +13,7 @@ const RoleSchema = new Schema<IRole>(
   {
     name: {
       type: String,
-      enum: ['USER', 'ADMIN', 'SUPER_ADMIN'],
+      enum: ['USER', 'ADMIN', 'SUPER_ADMIN', 'HR'],
       required: true,
       unique: true,
     },

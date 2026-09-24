@@ -10,3 +10,6 @@ export { Assessment } from './Assessment';
 export { CareerJourney } from './CareerJourney';
 export { Notification } from './Notification';
 export { AuditLog } from './AuditLog';
+export { Post } from './Post';
+export { Comment } from './Comment';
+export { Like } from './Like';

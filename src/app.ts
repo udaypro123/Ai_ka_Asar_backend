@@ -16,6 +16,10 @@ import skillRoutes from './routes/skill.route';
 import impactRoutes from './routes/impact.route';
 import careerRoutes from './routes/career.route';
 import notificationRoutes from './routes/notification.route';
+import adminRoutes from './routes/admin.route';
+import postRoutes from './routes/post.route';
+import commentRoutes from './routes/comment.route';
+import likeRoutes from './routes/like.route';
 
 const app: Application = express();
 
@@ -54,6 +58,10 @@ app.use(`/api/${env.API_VERSION}/skills`, skillRoutes);
 app.use(`/api/${env.API_VERSION}/impact`, impactRoutes);
 app.use(`/api/${env.API_VERSION}/career`, careerRoutes);
 app.use(`/api/${env.API_VERSION}/notifications`, notificationRoutes);
+app.use(`/api/${env.API_VERSION}/admin`, adminRoutes);
+app.use(`/api/${env.API_VERSION}/posts`, postRoutes);
+app.use(`/api/${env.API_VERSION}/comments`, commentRoutes);
+app.use(`/api/${env.API_VERSION}/likes`, likeRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Route not found', code: 'NOT_FOUND' });

@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { RoleType } from './Role';
 
 export interface IUser extends Document {
@@ -15,6 +15,10 @@ export interface IUser extends Document {
   careerGoal?: string;
   aiUsage?: string;
   aiImpactStatus?: string;
+  mobile?: string;
+  currentRole?: string;
+  previousRole?: string;
+  company?: string;
   isEmailVerified: boolean;
   roles: RoleType[];
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -79,13 +83,29 @@ const UserSchema = new Schema<IUser>(
       type: String,
       trim: true,
     },
+    mobile: {
+      type: String,
+      trim: true,
+    },
+    currentRole: {
+      type: String,
+      trim: true,
+    },
+    previousRole: {
+      type: String,
+      trim: true,
+    },
+    company: {
+      type: String,
+      trim: true,
+    },
     isEmailVerified: {
       type: Boolean,
       default: false,
     },
     roles: {
       type: [String],
-      enum: ['USER', 'ADMIN', 'SUPER_ADMIN'],
+      enum: ['USER', 'ADMIN', 'SUPER_ADMIN', "HR"],
       default: ['USER'],
     },
   },

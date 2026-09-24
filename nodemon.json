@@ -1,0 +1,10 @@
+{
+  "watch": ["src"],
+  "ext": "ts",
+  "exec": "tsx -r dotenv/config --experimental-json-modules src/server.ts",
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "ignore": ["src/**/*.test.ts"],
+  "delay": "1000"
+}

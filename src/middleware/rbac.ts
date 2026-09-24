@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
 import { AppError } from '../utils/appError';
-import { RoleType } from '../../models/Role';
+import { RoleType } from '../models/Role';
 
 export const authorize = (...allowedRoles: RoleType[]) => {
   return (req: any, res: Response, next: NextFunction): void => {
@@ -17,5 +17,5 @@ export const authorize = (...allowedRoles: RoleType[]) => {
   };
 };
 
-export const requireAdmin = authorize('ADMIN', 'SUPER_ADMIN');
+export const requireAdmin = authorize('ADMIN', 'SUPER_ADMIN', 'HR');
 export const requireSuperAdmin = authorize('SUPER_ADMIN');
