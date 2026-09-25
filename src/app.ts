@@ -20,6 +20,9 @@ import adminRoutes from './routes/admin.route';
 import postRoutes from './routes/post.route';
 import commentRoutes from './routes/comment.route';
 import likeRoutes from './routes/like.route';
+import userLikeRoutes from './routes/user-like.route';
+import userCommentRoutes from './routes/user-comment.route';
+import path from 'path';
 
 const app: Application = express();
 
@@ -48,8 +51,10 @@ if (env.isDevelopment) {
 }
 
 app.get('/health', (req, res) => {
-  res.json({ success: true, message: 'AI Ka Asar API is healthy', data: { status: 'ok' } });
+  res.json({ success: true, message: 'AIMarg API is healthy', data: { status: 'ok' } });
 });
+
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 app.use(`/api/${env.API_VERSION}/auth`, authRoutes);
 app.use(`/api/${env.API_VERSION}/users`, userRoutes);
@@ -62,6 +67,8 @@ app.use(`/api/${env.API_VERSION}/admin`, adminRoutes);
 app.use(`/api/${env.API_VERSION}/posts`, postRoutes);
 app.use(`/api/${env.API_VERSION}/comments`, commentRoutes);
 app.use(`/api/${env.API_VERSION}/likes`, likeRoutes);
+app.use(`/api/${env.API_VERSION}/user-likes`, userLikeRoutes);
+app.use(`/api/${env.API_VERSION}/user-comments`, userCommentRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Route not found', code: 'NOT_FOUND' });

@@ -43,7 +43,9 @@ export const getRecentActivity = async () => {
 export const getAllUsers = async () => {
   const users = await User.find()
     .sort({ createdAt: -1 })
-    .select('name email roles profession employmentStatus createdAt updatedAt');
+    .select(
+      'name email roles profession employmentStatus currentRole previousRole previousCompany company jobDescription linkedinUrl githubUrl resume mobile skills createdAt updatedAt'
+    );
 
   return users.map((u) => ({
     _id: u._id,
@@ -52,7 +54,50 @@ export const getAllUsers = async () => {
     roles: u.roles,
     profession: u.profession,
     employmentStatus: u.employmentStatus,
+    currentRole: u.currentRole,
+    previousRole: u.previousRole,
+    previousCompany: u.previousCompany,
+    company: u.company,
+    jobDescription: u.jobDescription,
+    linkedinUrl: u.linkedinUrl,
+    githubUrl: u.githubUrl,
+    resume: u.resume,
+    mobile: u.mobile,
+    skills: u.skills,
     createdAt: u.createdAt,
     updatedAt: u.updatedAt,
   }));
+};
+
+export const getPublicUsers = async (excludeUserId?: string) => {
+  const query: any = {
+    roles: { $nin: [['ADMIN'], ['SUPER_ADMIN']] },
+  };
+  if (excludeUserId) {
+    query._id = { $ne: excludeUserId };
+  }
+  const users = await User.find(query)
+    .sort({ createdAt: -1 })
+    .select('name email roles currentRole previousRole company previousCompany jobDescription mobile skills createdAt');
+
+  return users.map((u) => ({
+    _id: u._id,
+    name: u.name,
+    email: u.email,
+    roles: u.roles,
+    currentRole: u.currentRole,
+    previousRole: u.previousRole,
+    company: u.company,
+    previousCompany: u.previousCompany,
+    jobDescription: u.jobDescription,
+    mobile: u.mobile,
+    skills: u.skills,
+    createdAt: u.createdAt,
+  }));
+};
+
+export const getUserById = async (userId: string) => {
+  const user = await User.findById(userId).select('-password');
+  if (!user) throw new Error('User not found');
+  return user.toObject();
 };

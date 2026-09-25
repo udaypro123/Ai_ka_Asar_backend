@@ -18,7 +18,12 @@ export interface IUser extends Document {
   mobile?: string;
   currentRole?: string;
   previousRole?: string;
+  previousCompany?: string;
   company?: string;
+  jobDescription?: string;
+  linkedinUrl?: string;
+  githubUrl?: string;
+  resume?: string;
   isEmailVerified: boolean;
   roles: RoleType[];
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -95,7 +100,27 @@ const UserSchema = new Schema<IUser>(
       type: String,
       trim: true,
     },
+    previousCompany: {
+      type: String,
+      trim: true,
+    },
     company: {
+      type: String,
+      trim: true,
+    },
+    jobDescription: {
+      type: String,
+      trim: true,
+    },
+    linkedinUrl: {
+      type: String,
+      trim: true,
+    },
+    githubUrl: {
+      type: String,
+      trim: true,
+    },
+    resume: {
       type: String,
       trim: true,
     },

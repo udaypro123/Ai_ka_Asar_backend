@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { asyncHandler } from '../utils/asyncHandler';
+import { AppError } from '../utils/appError';
 import * as adminService from '../services/admin.service';
 
 export const getDashboardStats = asyncHandler(async (req: AuthRequest, res: Response) => {
@@ -15,5 +16,20 @@ export const getRecentActivity = asyncHandler(async (req: AuthRequest, res: Resp
 
 export const getAllUsers = asyncHandler(async (req: AuthRequest, res: Response) => {
   const users = await adminService.getAllUsers();
+  res.status(200).json({ success: true, message: 'Users retrieved', data: users });
+});
+
+export const getUserById = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const userId = req.params.id;
+  if (!userId) {
+    throw new AppError('User ID is required', 400, 'MISSING_USER_ID');
+  }
+  const user = await adminService.getUserById(userId);
+  res.status(200).json({ success: true, message: 'User retrieved', data: user });
+});
+
+export const getPublicUsers = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const excludeUserId = req.user!._id.toString();
+  const users = await adminService.getPublicUsers(excludeUserId);
   res.status(200).json({ success: true, message: 'Users retrieved', data: users });
 });

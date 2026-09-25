@@ -1,18 +1,19 @@
 {
-  "name": "ai-ka-asar-backend",
+  "name": "AIMarg-backend",
   "version": "1.0.0",
-  "description": "AI Ka Asar - Backend API",
+  "description": "AIMarg - Track the shift. Protect your path",
   "main": "dist/server.js",
-    "scripts": {
-      "dev": "nodemon -r dotenv/config --experimental-json-modules src/server.ts",
-      "build": "tsc",
-      "start": "node dist/server.js",
-      "lint": "eslint src --ext .ts",
-      "format": "prettier --write \"src/**/*.ts\"",
-      "test": "jest",
-      "test:watch": "jest --watch"
-    },
+  "scripts": {
+    "dev": "nodemon -r dotenv/config --experimental-json-modules src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
   "dependencies": {
+    "@types/multer": "^2.2.0",
     "argon2": "^0.31.2",
     "bcryptjs": "^3.0.3",
     "compression": "^1.7.4",
@@ -29,6 +30,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.0.0",
     "morgan": "^1.10.0",
+    "multer": "^2.4.0",
     "nodemailer": "^6.9.7",
     "winston": "^3.11.0",
     "xss-clean": "^0.1.4",

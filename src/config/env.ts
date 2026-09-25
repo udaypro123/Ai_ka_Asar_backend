@@ -15,12 +15,12 @@ export const env = {
   SMTP_PORT: parseInt(process.env.SMTP_PORT || '587', 10),
   SMTP_USER: process.env.SMTP_USER || '',
   SMTP_PASS: process.env.SMTP_PASS || '',
-  FROM_EMAIL: process.env.FROM_EMAIL || 'noreply@aikaasar.com',
+  FROM_EMAIL: process.env.FROM_EMAIL || 'noreply@AIMarg.com',
   CORS_ORIGIN: process.env.CORS_ORIGIN || 'http://localhost:8081',
   HOST: process.env.HOST || '0.0.0.0',
   RATE_LIMIT_WINDOW_MS: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10),
   RATE_LIMIT_MAX_REQUESTS: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
-  APP_NAME: process.env.APP_NAME || 'AI Ka Asar',
+  APP_NAME: process.env.APP_NAME || 'AIMarg',
   API_VERSION: process.env.API_VERSION || 'v1',
 };
 
