@@ -1,11 +1,14 @@
 import { User } from '../models/User';
+import { RefreshToken } from '../models/RefreshToken';
+import { AppError } from '../utils/appError';
 
 export const getDashboardStats = async () => {
-  const totalUsers = await User.countDocuments();
+  const nonAdminUsers = { roles: { $nin: ['ADMIN', 'SUPER_ADMIN'] } };
+  const totalUsers = await User.countDocuments(nonAdminUsers);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const todayUsers = await User.countDocuments({ createdAt: { $gte: today } });
-  const recentUsers = await User.find()
+  const todayUsers = await User.countDocuments({ ...nonAdminUsers, createdAt: { $gte: today } });
+  const recentUsers = await User.find(nonAdminUsers)
     .sort({ createdAt: -1 })
     .limit(10)
     .select('name email roles createdAt');
@@ -24,7 +27,7 @@ export const getDashboardStats = async () => {
 };
 
 export const getRecentActivity = async () => {
-  const recentUsers = await User.find()
+  const recentUsers = await User.find({ roles: { $nin: ['ADMIN', 'SUPER_ADMIN'] } })
     .sort({ updatedAt: -1 })
     .limit(20)
     .select('name email roles createdAt updatedAt');
@@ -41,10 +44,10 @@ export const getRecentActivity = async () => {
 };
 
 export const getAllUsers = async () => {
-  const users = await User.find()
+  const users = await User.find({ roles: { $nin: ['ADMIN', 'SUPER_ADMIN'] } })
     .sort({ createdAt: -1 })
     .select(
-      'name email roles profession employmentStatus currentRole previousRole previousCompany company jobDescription linkedinUrl githubUrl resume mobile skills createdAt updatedAt'
+      'name email roles profession employmentStatus currentRole previousRole previousCompany company jobDescription linkedinUrl githubUrl resume mobile skills isBlocked createdAt updatedAt'
     );
 
   return users.map((u) => ({
@@ -64,6 +67,7 @@ export const getAllUsers = async () => {
     resume: u.resume,
     mobile: u.mobile,
     skills: u.skills,
+    isBlocked: u.isBlocked,
     createdAt: u.createdAt,
     updatedAt: u.updatedAt,
   }));
@@ -71,7 +75,7 @@ export const getAllUsers = async () => {
 
 export const getPublicUsers = async (excludeUserId?: string) => {
   const query: any = {
-    roles: { $nin: [['ADMIN'], ['SUPER_ADMIN']] },
+    roles: { $nin: ['ADMIN', 'SUPER_ADMIN'] },
   };
   if (excludeUserId) {
     query._id = { $ne: excludeUserId };
@@ -100,4 +104,21 @@ export const getUserById = async (userId: string) => {
   const user = await User.findById(userId).select('-password');
   if (!user) throw new Error('User not found');
   return user.toObject();
+};
+
+export const setUserBlockedStatus = async (userId: string, isBlocked: boolean) => {
+  const user = await User.findById(userId);
+  if (!user) throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+  if (user.roles.some((role) => role === 'ADMIN' || role === 'SUPER_ADMIN')) {
+    throw new AppError('Admin accounts cannot be blocked here', 403, 'CANNOT_BLOCK_ADMIN');
+  }
+  if (!user.roles.some((role) => role === 'USER' || role === 'HR')) {
+    throw new AppError('Only HR and user accounts can be blocked', 400, 'INVALID_BLOCK_TARGET');
+  }
+
+  user.isBlocked = isBlocked;
+  await user.save();
+  if (isBlocked) await RefreshToken.deleteMany({ userId: user._id });
+
+  return { _id: user._id, isBlocked: user.isBlocked };
 };

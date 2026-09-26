@@ -1,23 +1,22 @@
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { User } from '../models/User';
 import { RefreshToken } from '../models/RefreshToken';
 import { env } from '../config/env';
 import { AppError } from '../utils/appError';
+import { sendPasswordResetEmail } from './email.service';
 
-export const registerUser = async (data: { name: string; email: string; password: string; role?: string }) => {
+export const registerUser = async (data: { name: string; email: string; password: string }) => {
   const existingUser = await User.findOne({ email: data.email });
   if (existingUser) {
     throw new AppError('Email already registered', 409, 'EMAIL_EXISTS');
   }
 
-  const role = data.role === 'HR' ? 'HR' : 'USER';
   const user = await User.create({
     name: data.name,
     email: data.email,
     password: data.password,
-    roles: [role],
+    roles: ['USER'],
   });
 
   const { accessToken, refreshToken } = generateTokens(user._id.toString());
@@ -36,6 +35,9 @@ export const loginUser = async (email: string, password: string) => {
   if (!isPasswordValid) {
     throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
   }
+  if (user.isBlocked) {
+    throw new AppError('Your account has been blocked', 403, 'ACCOUNT_BLOCKED');
+  }
 
   const { accessToken, refreshToken } = generateTokens(user._id.toString());
   await storeRefreshToken(user._id.toString(), refreshToken);
@@ -44,35 +46,55 @@ export const loginUser = async (email: string, password: string) => {
 };
 
 export const refreshAccessToken = async (token: string) => {
-  const storedToken = await RefreshToken.findOne({ token });
-  if (!storedToken || storedToken.expiresAt < new Date()) {
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  const storedToken = await RefreshToken.findOneAndDelete({
+    token: tokenHash,
+    expiresAt: { $gt: new Date() },
+  });
+  if (!storedToken) {
     throw new AppError('Invalid or expired refresh token', 401, 'INVALID_REFRESH_TOKEN');
   }
 
   const decoded = jwt.verify(token, env.JWT_REFRESH_SECRET) as { userId: string };
+  const user = await User.findById(decoded.userId);
+  if (!user || user.isBlocked) {
+    await RefreshToken.deleteMany({ userId: decoded.userId });
+    throw new AppError(
+      user ? 'Your account has been blocked' : 'User not found',
+      user ? 403 : 401,
+      user ? 'ACCOUNT_BLOCKED' : 'USER_NOT_FOUND'
+    );
+  }
   const { accessToken, refreshToken: newRefreshToken } = generateTokens(decoded.userId);
 
-  await RefreshToken.findByIdAndDelete(storedToken._id);
   await storeRefreshToken(decoded.userId, newRefreshToken);
 
   return { accessToken, refreshToken: newRefreshToken };
 };
 
 export const revokeRefreshToken = async (token: string) => {
-  await RefreshToken.findOneAndDelete({ token });
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  await RefreshToken.findOneAndDelete({ token: tokenHash });
 };
 
 export const forgotPassword = async (email: string) => {
   const user = await User.findOne({ email });
   if (!user) {
-    return { resetToken: null };
+    return;
   }
   const resetToken = crypto.randomBytes(32).toString('hex');
   const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
   user.resetPasswordToken = hashedToken;
   user.resetPasswordExpires = new Date(Date.now() + 10 * 60 * 1000);
   await user.save();
-  return { resetToken };
+  try {
+    await sendPasswordResetEmail(user.email, resetToken);
+  } catch {
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+    console.error('Password reset email delivery failed');
+  }
 };
 
 export const resetPassword = async (token: string, password: string) => {
@@ -80,7 +102,7 @@ export const resetPassword = async (token: string, password: string) => {
   const user = await User.findOne({
     resetPasswordToken: hashedToken,
     resetPasswordExpires: { $gt: Date.now() },
-  }).select('+password');
+  }).select('+password +resetPasswordToken +resetPasswordExpires');
 
   if (!user) {
     throw new AppError('Invalid or expired reset token', 400, 'INVALID_RESET_TOKEN');
@@ -90,6 +112,7 @@ export const resetPassword = async (token: string, password: string) => {
   user.resetPasswordToken = undefined;
   user.resetPasswordExpires = undefined;
   await user.save();
+  await RefreshToken.deleteMany({ userId: user._id });
 };
 
 export const verifyEmail = async (token: string) => {
@@ -97,7 +120,7 @@ export const verifyEmail = async (token: string) => {
   const user = await User.findOne({
     emailVerificationToken: hashedToken,
     emailVerificationExpires: { $gt: Date.now() },
-  });
+  }).select('+emailVerificationToken +emailVerificationExpires');
 
   if (!user) {
     throw new AppError('Invalid or expired verification token', 400, 'INVALID_VERIFICATION_TOKEN');
@@ -111,11 +134,11 @@ export const verifyEmail = async (token: string) => {
 
 const generateTokens = (userId: string) => {
   const accessToken = jwt.sign({ userId }, env.JWT_ACCESS_SECRET, {
-    expiresIn: env.JWT_ACCESS_EXPIRY,
+    expiresIn: env.JWT_ACCESS_EXPIRY as jwt.SignOptions['expiresIn'],
   });
 
   const refreshToken = jwt.sign({ userId }, env.JWT_REFRESH_SECRET, {
-    expiresIn: env.JWT_REFRESH_EXPIRY,
+    expiresIn: env.JWT_REFRESH_EXPIRY as jwt.SignOptions['expiresIn'],
   });
 
   return { accessToken, refreshToken };
@@ -130,5 +153,6 @@ const storeRefreshToken = async (userId: string, token: string) => {
     expiresAt.setHours(expiresAt.getHours() + maxAge);
   }
 
-  await RefreshToken.create({ userId, token, expiresAt });
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  await RefreshToken.create({ userId, token: tokenHash, expiresAt });
 };

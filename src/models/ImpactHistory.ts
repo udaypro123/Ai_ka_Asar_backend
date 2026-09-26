@@ -11,12 +11,12 @@ export interface IImpactHistory extends Document {
 const ImpactHistorySchema = new Schema<IImpactHistory>(
   {
     userId: {
-      type: mongoose.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
     },
     reportId: {
-      type: mongoose.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: 'AIImpactReport',
       required: true,
     },

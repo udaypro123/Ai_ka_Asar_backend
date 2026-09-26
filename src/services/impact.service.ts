@@ -1,4 +1,5 @@
-import { AIImpactReport, ImpactHistory } from '../models/AIImpactReport';
+import { AIImpactReport } from '../models/AIImpactReport';
+import { ImpactHistory } from '../models/ImpactHistory';
 
 export const createImpactReport = async (userId: string, data: any) => {
   return AIImpactReport.create({ ...data, userId });

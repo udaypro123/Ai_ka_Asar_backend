@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getDashboardStats, getRecentActivity, getAllUsers, getUserById, getPublicUsers } from '../controllers/admin.controller';
+import { getDashboardStats, getRecentActivity, getAllUsers, getUserById, getPublicUsers, setUserBlockedStatus } from '../controllers/admin.controller';
 import { authenticate } from '../middleware/auth';
 import { authorize } from '../middleware/rbac';
 import { RoleType } from '../models/Role';
@@ -10,6 +10,7 @@ router.get('/stats', authenticate, authorize('ADMIN', 'SUPER_ADMIN', 'HR'), getD
 router.get('/recent-activity', authenticate, authorize('ADMIN', 'SUPER_ADMIN', 'HR'), getRecentActivity);
 router.get('/users', authenticate, authorize('ADMIN', 'SUPER_ADMIN', 'HR'), getAllUsers);
 router.get('/users/:id', authenticate, authorize('ADMIN', 'SUPER_ADMIN', 'HR'), getUserById);
+router.put('/users/:id/block', authenticate, authorize('ADMIN', 'SUPER_ADMIN'), setUserBlockedStatus);
 router.get('/public/users', authenticate, getPublicUsers);
 
 export default router;

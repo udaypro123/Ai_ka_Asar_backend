@@ -11,7 +11,7 @@ export interface IAssessment extends Document {
 const AssessmentSchema = new Schema<IAssessment>(
   {
     userId: {
-      type: mongoose.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
     },

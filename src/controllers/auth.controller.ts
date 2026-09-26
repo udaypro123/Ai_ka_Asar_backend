@@ -3,56 +3,91 @@ import { AuthRequest } from '../middleware/auth';
 import { asyncHandler } from '../utils/asyncHandler';
 import { AppError } from '../utils/appError';
 import * as authService from '../services/auth.service';
+import { env } from '../config/env';
+
+const refreshCookieName = 'aimarg_refresh';
+const refreshCookieOptions = {
+  httpOnly: true,
+  secure: env.isProduction,
+  sameSite: env.AUTH_COOKIE_SAME_SITE,
+  path: `/api/${env.API_VERSION}/auth`,
+};
+
+const usesCookieAuth = (req: AuthRequest): boolean => req.get('x-auth-mode') === 'cookie';
+
+const setRefreshCookie = (res: Response, token: string): void => {
+  res.cookie(refreshCookieName, token, {
+    ...refreshCookieOptions,
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+};
 
 export const register = asyncHandler(async (req: AuthRequest, res: Response) => {
-  console.log("resister function enter ", req.body)
-  const { name, email, password, role } = req.body;
-  const result = await authService.registerUser({ name, email, password, role });
+  const { name, email, password } = req.body;
+  const result = await authService.registerUser({ name, email, password });
+  const cookieAuth = usesCookieAuth(req);
+  if (cookieAuth) setRefreshCookie(res, result.refreshToken);
   res.status(201).json({
     success: true,
     message: 'User registered successfully',
-    data: { user: result.user, accessToken: result.accessToken, refreshToken: result.refreshToken },
+    data: {
+      user: result.user,
+      accessToken: result.accessToken,
+      ...(!cookieAuth && { refreshToken: result.refreshToken }),
+    },
   });
 });
 
 export const login = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { email, password } = req.body;
   const result = await authService.loginUser(email, password);
+  const cookieAuth = usesCookieAuth(req);
+  if (cookieAuth) setRefreshCookie(res, result.refreshToken);
   res.status(200).json({
     success: true,
     message: 'Login successful',
-    data: { user: result.user, accessToken: result.accessToken, refreshToken: result.refreshToken },
+    data: {
+      user: result.user,
+      accessToken: result.accessToken,
+      ...(!cookieAuth && { refreshToken: result.refreshToken }),
+    },
   });
 });
 
 export const refreshToken = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { refreshToken } = req.body;
+  const cookieAuth = usesCookieAuth(req);
+  const refreshToken = cookieAuth ? req.cookies?.[refreshCookieName] : req.body.refreshToken;
   if (!refreshToken) {
     throw new AppError('Refresh token is required', 401, 'REFRESH_TOKEN_REQUIRED');
   }
   const result = await authService.refreshAccessToken(refreshToken);
+  if (cookieAuth) setRefreshCookie(res, result.refreshToken);
   res.status(200).json({
     success: true,
     message: 'Token refreshed successfully',
-    data: { accessToken: result.accessToken, refreshToken: result.refreshToken },
+    data: {
+      accessToken: result.accessToken,
+      ...(!cookieAuth && { refreshToken: result.refreshToken }),
+    },
   });
 });
 
 export const logout = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { refreshToken } = req.body;
+  const cookieAuth = usesCookieAuth(req);
+  const refreshToken = cookieAuth ? req.cookies?.[refreshCookieName] : req.body.refreshToken;
   if (refreshToken) {
     await authService.revokeRefreshToken(refreshToken);
   }
+  if (cookieAuth) res.clearCookie(refreshCookieName, refreshCookieOptions);
   res.status(200).json({ success: true, message: 'Logged out successfully' });
 });
 
 export const forgotPassword = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { email } = req.body;
-  const result = await authService.forgotPassword(email);
+  await authService.forgotPassword(email);
   res.status(200).json({
     success: true,
-    message: 'Password reset link sent to your email',
-    data: { resetToken: result.resetToken },
+    message: 'If an account exists for that email, a password reset link will be sent.',
   });
 });
 

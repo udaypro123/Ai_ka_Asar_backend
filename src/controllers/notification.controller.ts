@@ -11,6 +11,6 @@ export const getNotifications = asyncHandler(async (req: AuthRequest, res: Respo
 
 export const markAsRead = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
-  const notification = await notificationService.markAsRead(id);
+  const notification = await notificationService.markAsRead(id!);
   res.status(200).json({ success: true, message: 'Notification marked as read', data: notification });
 });

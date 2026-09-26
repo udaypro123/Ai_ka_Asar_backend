@@ -18,7 +18,7 @@ export interface ICareerJourney extends Document {
 const CareerJourneySchema = new Schema<ICareerJourney>(
   {
     userId: {
-      type: mongoose.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
     },

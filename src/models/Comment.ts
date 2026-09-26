@@ -12,13 +12,13 @@ export interface IComment extends Document {
 const CommentSchema = new Schema<IComment>(
   {
     postId: {
-      type: mongoose.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: 'Post',
       required: true,
       index: true,
     },
     userId: {
-      type: mongoose.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
       index: true,

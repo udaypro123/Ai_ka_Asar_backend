@@ -1,12 +1,13 @@
 import { Router } from 'express';
-import { getProfile, updateProfile, uploadResume } from '../controllers/user.controller';
+import { downloadResume, getProfile, updateProfile, uploadResume } from '../controllers/user.controller';
 import { authenticate } from '../middleware/auth';
-import { upload, debugUpload } from '../middleware/upload';
+import { upload } from '../middleware/upload';
 
 const router = Router();
 
 router.get('/me', authenticate, getProfile);
 router.patch('/me', authenticate, updateProfile);
-router.post('/me/resume', authenticate, debugUpload, upload.single('resume'), uploadResume);
+router.get('/me/resume', authenticate, downloadResume);
+router.post('/me/resume', authenticate, upload.single('resume'), uploadResume);
 
 export default router;

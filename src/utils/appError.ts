@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction, RequestHandler } from 'express';
 import { env } from '../config/env';
 
 export class AppError extends Error {
@@ -15,9 +15,11 @@ export class AppError extends Error {
   }
 }
 
-export const asyncHandler = (fn: Function) => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    Promise.resolve(fn(req, res, next)).catch(next);
+export const asyncHandler = <T extends Request>(
+  fn: (req: T, res: Response, next: NextFunction) => unknown
+): RequestHandler => {
+  return (req, res, next) => {
+    Promise.resolve(fn(req as T, res, next)).catch(next);
   };
 };
 
@@ -55,14 +57,17 @@ export const errorHandler = (
     statusCode = 409;
     code = 'DUPLICATE_ERROR';
     message = 'Resource already exists';
+  } else if (err.name === 'MulterError') {
+    statusCode = 400;
+    code = 'UPLOAD_ERROR';
+    message = 'The uploaded file is invalid or exceeds the allowed size';
   }
 
   console.error({
-    message: err.message,
-    stack: err.stack,
-    url: req.url,
+    message: env.isDevelopment ? err.message : 'Request failed',
+    ...(env.isDevelopment && { stack: err.stack }),
+    path: req.path,
     method: req.method,
-    ip: req.ip,
   });
 
   res.status(statusCode).json({

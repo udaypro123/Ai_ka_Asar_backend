@@ -22,13 +22,19 @@ import commentRoutes from './routes/comment.route';
 import likeRoutes from './routes/like.route';
 import userLikeRoutes from './routes/user-like.route';
 import userCommentRoutes from './routes/user-comment.route';
-import path from 'path';
 
 const app: Application = express();
+if (env.TRUST_PROXY_HOPS > 0) app.set('trust proxy', env.TRUST_PROXY_HOPS);
 
 app.use(helmet());
 const corsOptions = {
-  origin: env.isDevelopment ? true : env.CORS_ORIGIN,
+  origin: (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => {
+    if (!origin || env.CORS_ORIGIN.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+    callback(new Error('Origin is not allowed by CORS'));
+  },
   credentials: true,
 };
 app.use(cors(corsOptions));
@@ -42,6 +48,8 @@ app.use(hpp());
 const limiter = rateLimit({
   windowMs: env.RATE_LIMIT_WINDOW_MS,
   max: env.RATE_LIMIT_MAX_REQUESTS,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
   message: { success: false, message: 'Too many requests', code: 'RATE_LIMIT_EXCEEDED' },
 });
 app.use('/api/', limiter);
@@ -53,8 +61,6 @@ if (env.isDevelopment) {
 app.get('/health', (req, res) => {
   res.json({ success: true, message: 'AIMarg API is healthy', data: { status: 'ok' } });
 });
-
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 app.use(`/api/${env.API_VERSION}/auth`, authRoutes);
 app.use(`/api/${env.API_VERSION}/users`, userRoutes);

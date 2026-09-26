@@ -12,7 +12,7 @@ export interface IAuditLog extends Document {
 const AuditLogSchema = new Schema<IAuditLog>(
   {
     userId: {
-      type: mongoose.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: 'User',
     },
     action: {

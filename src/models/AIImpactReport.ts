@@ -15,12 +15,12 @@ export interface IAIImpactReport extends Document {
 const AIImpactReportSchema = new Schema<IAIImpactReport>(
   {
     userId: {
-      type: mongoose.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
     },
     professionId: {
-      type: mongoose.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: 'Profession',
     },
     employmentStatus: {

@@ -25,6 +25,11 @@ export interface IUser extends Document {
   githubUrl?: string;
   resume?: string;
   isEmailVerified: boolean;
+  isBlocked: boolean;
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
+  emailVerificationToken?: string;
+  emailVerificationExpires?: Date;
   roles: RoleType[];
   comparePassword(candidatePassword: string): Promise<boolean>;
   createdAt: Date;
@@ -49,7 +54,7 @@ const UserSchema = new Schema<IUser>(
     password: {
       type: String,
       required: [true, 'Password is required'],
-      minlength: [6, 'Password must be at least 6 characters'],
+      minlength: [8, 'Password must be at least 8 characters'],
       select: false,
     },
     country: {
@@ -128,6 +133,14 @@ const UserSchema = new Schema<IUser>(
       type: Boolean,
       default: false,
     },
+    isBlocked: {
+      type: Boolean,
+      default: false,
+    },
+    resetPasswordToken: { type: String, select: false },
+    resetPasswordExpires: { type: Date, select: false },
+    emailVerificationToken: { type: String, select: false },
+    emailVerificationExpires: { type: Date, select: false },
     roles: {
       type: [String],
       enum: ['USER', 'ADMIN', 'SUPER_ADMIN', "HR"],
@@ -154,7 +167,12 @@ UserSchema.methods.comparePassword = async function (candidatePassword: string):
 
 UserSchema.set('toJSON', {
   transform: (_doc, ret) => {
-    delete ret.password;
+    const safeUser = ret as unknown as Record<string, unknown>;
+    delete safeUser.password;
+    delete safeUser.resetPasswordToken;
+    delete safeUser.resetPasswordExpires;
+    delete safeUser.emailVerificationToken;
+    delete safeUser.emailVerificationExpires;
     return ret;
   },
 });

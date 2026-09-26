@@ -28,6 +28,19 @@ export const getUserById = asyncHandler(async (req: AuthRequest, res: Response) 
   res.status(200).json({ success: true, message: 'User retrieved', data: user });
 });
 
+export const setUserBlockedStatus = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const userId = req.params.id;
+  if (!userId) {
+    throw new AppError('User ID is required', 400, 'MISSING_USER_ID');
+  }
+  if (typeof req.body.isBlocked !== 'boolean') {
+    throw new AppError('isBlocked must be a boolean', 400, 'INVALID_BLOCK_STATUS');
+  }
+
+  const user = await adminService.setUserBlockedStatus(userId, req.body.isBlocked);
+  res.status(200).json({ success: true, message: 'User status updated', data: user });
+});
+
 export const getPublicUsers = asyncHandler(async (req: AuthRequest, res: Response) => {
   const excludeUserId = req.user!._id.toString();
   const users = await adminService.getPublicUsers(excludeUserId);

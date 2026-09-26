@@ -9,13 +9,13 @@ export interface ILike extends Document {
 const LikeSchema = new Schema<ILike>(
   {
     postId: {
-      type: mongoose.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: 'Post',
       required: true,
       index: true,
     },
     userId: {
-      type: mongoose.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
       index: true,

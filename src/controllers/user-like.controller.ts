@@ -12,3 +12,8 @@ export const getUserLikes = asyncHandler(async (req: AuthRequest, res: Response)
   const likes = await userLikeService.getUserLikes(req.params.userId!);
   res.status(200).json({ success: true, message: 'Likes retrieved', data: likes });
 });
+
+export const getUserInteractionSummary = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const summary = await userLikeService.getUserInteractionSummary(req.user!._id.toString());
+  res.status(200).json({ success: true, message: 'User interactions retrieved', data: summary });
+});

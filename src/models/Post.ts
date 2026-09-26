@@ -14,7 +14,7 @@ export interface IPost extends Document {
 const PostSchema = new Schema<IPost>(
   {
     userId: {
-      type: mongoose.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
       index: true,
@@ -38,7 +38,7 @@ const PostSchema = new Schema<IPost>(
     },
     likes: [
       {
-        type: mongoose.Types.ObjectId,
+        type: Schema.Types.ObjectId,
         ref: 'User',
       },
     ],

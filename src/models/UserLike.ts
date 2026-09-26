@@ -9,13 +9,13 @@ export interface IUserLike extends Document {
 const UserLikeSchema = new Schema<IUserLike>(
   {
     targetUserId: {
-      type: mongoose.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
       index: true,
     },
     userId: {
-      type: mongoose.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
       index: true,

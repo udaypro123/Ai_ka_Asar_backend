@@ -20,6 +20,6 @@ export const updateMySkill = asyncHandler(async (req: AuthRequest, res: Response
   if (typeof level !== 'number') {
     throw new AppError('Level is required', 400, 'VALIDATION_ERROR');
   }
-  const skill = await skillService.updateSkill(req.user!._id.toString(), skillId, level);
+  const skill = await skillService.updateSkill(req.user!._id.toString(), skillId!, level);
   res.status(200).json({ success: true, message: 'Skill updated', data: skill });
 });

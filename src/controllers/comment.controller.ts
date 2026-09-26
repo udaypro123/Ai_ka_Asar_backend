@@ -10,6 +10,6 @@ export const createComment = asyncHandler(async (req: AuthRequest, res: Response
 });
 
 export const getComments = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const comments = await commentService.getComments(req.params.postId);
+  const comments = await commentService.getComments(req.params.postId!);
   res.status(200).json({ success: true, message: 'Comments retrieved', data: comments });
 });
