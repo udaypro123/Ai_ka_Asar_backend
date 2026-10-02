@@ -1,4 +1,4 @@
-name: Deploy Node Backend
+name: Deploy AIMarg Backend
 
 on:
   push:
@@ -10,14 +10,34 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to EC2
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Upload backend to EC2
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "."
+          target: "/home/ubuntu/AIMarg_backend"
+
+      - name: Deploy and restart backend
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            echo "Connected to EC2"
-            whoami
-            node -v
-            npm -v
+            cd /home/ubuntu/AIMarg_backend
+
+            npm install
+
+            npm run build
+
+            pm2 delete AIMarg-backend || true
+
+            pm2 start npm --name "AIMarg-backend" -- start
+
+            pm2 save
