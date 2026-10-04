@@ -1,10 +1,32 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import { OAuth2Client } from 'google-auth-library';
 import { User } from '../models/User';
 import { RefreshToken } from '../models/RefreshToken';
 import { env } from '../config/env';
 import { AppError } from '../utils/appError';
 import { sendPasswordResetEmail } from './email.service';
+
+const googleClient = new OAuth2Client();
+
+type GoogleUserDocument = {
+  _id: { toString(): string };
+  googleId?: string;
+  isBlocked?: boolean;
+  isEmailVerified?: boolean;
+  save(): Promise<unknown>;
+};
+
+const createGoogleSession = async <T extends GoogleUserDocument>(user: T, isNewUser: boolean) => {
+  if (user.isBlocked) {
+    throw new AppError('Your account has been blocked', 403, 'ACCOUNT_BLOCKED');
+  }
+
+  const { accessToken, refreshToken } = generateTokens(user._id.toString());
+  await storeRefreshToken(user._id.toString(), refreshToken);
+
+  return { user, accessToken, refreshToken, isNewUser };
+};
 
 export const registerUser = async (data: { name: string; email: string; password: string }) => {
   const existingUser = await User.findOne({ email: data.email });
@@ -43,6 +65,100 @@ export const loginUser = async (email: string, password: string) => {
   await storeRefreshToken(user._id.toString(), refreshToken);
 
   return { user, accessToken, refreshToken };
+};
+
+export const authenticateGoogleUser = async ({
+  idToken,
+  accessToken,
+}: {
+  idToken?: string;
+  accessToken?: string;
+}) => {
+  if (env.GOOGLE_CLIENT_IDS.length === 0) {
+    throw new AppError('Google sign-in is not configured', 503, 'GOOGLE_AUTH_NOT_CONFIGURED');
+  }
+
+  let identity: { sub?: string; email?: string; email_verified?: boolean; name?: string } | undefined;
+  if (idToken) {
+    try {
+      const ticket = await googleClient.verifyIdToken({
+        idToken,
+        audience: env.GOOGLE_CLIENT_IDS,
+      });
+      identity = ticket.getPayload();
+    } catch {
+      throw new AppError('Invalid Google ID token', 401, 'INVALID_GOOGLE_TOKEN');
+    }
+  } else if (accessToken) {
+    try {
+      const tokenInfo = await googleClient.getTokenInfo(accessToken);
+      if (!env.GOOGLE_CLIENT_IDS.includes(tokenInfo.aud)) {
+        throw new Error('Google access token audience is not configured');
+      }
+      identity = {
+        sub: tokenInfo.sub || tokenInfo.user_id,
+        email: tokenInfo.email,
+        email_verified: tokenInfo.email_verified,
+        name: tokenInfo.email?.split('@')[0],
+      };
+    } catch {
+      throw new AppError('Invalid Google access token', 401, 'INVALID_GOOGLE_TOKEN');
+    }
+  }
+
+  if (!identity?.sub || !identity.email || identity.email_verified !== true) {
+    throw new AppError('Google account must have a verified email address', 401, 'GOOGLE_EMAIL_NOT_VERIFIED');
+  }
+
+  const email = identity.email.toLowerCase();
+  const user = await User.findOne({ $or: [{ googleId: identity.sub }, { email }] }).select('+googleId');
+
+  if (user?.isBlocked) {
+    throw new AppError('Your account has been blocked', 403, 'ACCOUNT_BLOCKED');
+  }
+
+  if (user?.googleId && user.googleId !== identity.sub) {
+    throw new AppError('This email is linked to a different Google account', 409, 'GOOGLE_ACCOUNT_CONFLICT');
+  }
+
+  if (!user) {
+    try {
+      const createdUser = await User.create({
+        name: identity.name?.trim() || 'Google User',
+        email,
+        googleId: identity.sub,
+        isEmailVerified: true,
+        roles: ['USER'],
+      });
+      return createGoogleSession(createdUser, true);
+    } catch (error) {
+      if (!error || typeof error !== 'object' || !('code' in error) || error.code !== 11000) {
+        throw error;
+      }
+      const concurrentUser = await User.findOne({ $or: [{ googleId: identity.sub }, { email }] }).select('+googleId');
+      if (!concurrentUser) throw error;
+      if (concurrentUser.isBlocked) {
+        throw new AppError('Your account has been blocked', 403, 'ACCOUNT_BLOCKED');
+      }
+      if (concurrentUser.googleId && concurrentUser.googleId !== identity.sub) {
+        throw new AppError('This email is linked to a different Google account', 409, 'GOOGLE_ACCOUNT_CONFLICT');
+      }
+      concurrentUser.googleId = identity.sub;
+      concurrentUser.isEmailVerified = true;
+      await concurrentUser.save();
+      return createGoogleSession(concurrentUser, false);
+    }
+  }
+
+  if (!user) {
+    throw new AppError('Google account could not be resolved', 500, 'GOOGLE_ACCOUNT_LOAD_FAILED');
+  }
+  if (!user.googleId) {
+    user.googleId = identity.sub;
+    user.isEmailVerified = true;
+    await user.save();
+  }
+  return createGoogleSession(user, false);
 };
 
 export const refreshAccessToken = async (token: string) => {

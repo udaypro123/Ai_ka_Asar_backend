@@ -5,7 +5,8 @@ import { RoleType } from './Role';
 export interface IUser extends Document {
   name: string;
   email: string;
-  password: string;
+  password?: string;
+  googleId?: string;
   country?: string;
   profession?: string;
   industry?: string;
@@ -24,6 +25,15 @@ export interface IUser extends Document {
   linkedinUrl?: string;
   githubUrl?: string;
   resume?: string;
+  resumePublicId?: string;
+  privacySettings: {
+    profileDiscoverable: boolean;
+  };
+  notificationPreferences: {
+    email: boolean;
+    sms: boolean;
+    whatsapp: boolean;
+  };
   isEmailVerified: boolean;
   isBlocked: boolean;
   resetPasswordToken?: string;
@@ -53,8 +63,14 @@ const UserSchema = new Schema<IUser>(
     },
     password: {
       type: String,
-      required: [true, 'Password is required'],
+      required: false,
       minlength: [8, 'Password must be at least 8 characters'],
+      select: false,
+    },
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
       select: false,
     },
     country: {
@@ -129,6 +145,30 @@ const UserSchema = new Schema<IUser>(
       type: String,
       trim: true,
     },
+    resumePublicId: {
+      type: String,
+      trim: true,
+    },
+    privacySettings: {
+      profileDiscoverable: {
+        type: Boolean,
+        default: true,
+      },
+    },
+    notificationPreferences: {
+      email: {
+        type: Boolean,
+        default: true,
+      },
+      sms: {
+        type: Boolean,
+        default: false,
+      },
+      whatsapp: {
+        type: Boolean,
+        default: false,
+      },
+    },
     isEmailVerified: {
       type: Boolean,
       default: false,
@@ -162,6 +202,7 @@ UserSchema.pre<IUser>('save', async function (next) {
 });
 
 UserSchema.methods.comparePassword = async function (candidatePassword: string): Promise<boolean> {
+  if (!this.password) return false;
   return bcrypt.compare(candidatePassword, this.password);
 };
 
@@ -169,6 +210,8 @@ UserSchema.set('toJSON', {
   transform: (_doc, ret) => {
     const safeUser = ret as unknown as Record<string, unknown>;
     delete safeUser.password;
+    delete safeUser.googleId;
+    delete safeUser.resumePublicId;
     delete safeUser.resetPasswordToken;
     delete safeUser.resetPasswordExpires;
     delete safeUser.emailVerificationToken;

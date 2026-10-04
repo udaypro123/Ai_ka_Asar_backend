@@ -76,13 +76,14 @@ export const getAllUsers = async () => {
 export const getPublicUsers = async (excludeUserId?: string) => {
   const query: any = {
     roles: { $nin: ['ADMIN', 'SUPER_ADMIN'] },
+    'privacySettings.profileDiscoverable': { $ne: false },
   };
   if (excludeUserId) {
     query._id = { $ne: excludeUserId };
   }
   const users = await User.find(query)
     .sort({ createdAt: -1 })
-    .select('name email roles currentRole previousRole company previousCompany jobDescription mobile skills createdAt');
+    .select('name email roles currentRole previousRole company previousCompany jobDescription mobile skills resume createdAt');
 
   return users.map((u) => ({
     _id: u._id,
@@ -96,12 +97,13 @@ export const getPublicUsers = async (excludeUserId?: string) => {
     jobDescription: u.jobDescription,
     mobile: u.mobile,
     skills: u.skills,
+    hasResume: Boolean(u.resume),
     createdAt: u.createdAt,
   }));
 };
 
 export const getUserById = async (userId: string) => {
-  const user = await User.findById(userId).select('-password');
+  const user = await User.findById(userId).select('-password -resumePublicId');
   if (!user) throw new Error('User not found');
   return user.toObject();
 };

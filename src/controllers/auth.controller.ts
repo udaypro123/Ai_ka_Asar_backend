@@ -54,6 +54,22 @@ export const login = asyncHandler(async (req: AuthRequest, res: Response) => {
   });
 });
 
+export const googleAuth = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const result = await authService.authenticateGoogleUser(req.body);
+  const cookieAuth = usesCookieAuth(req);
+  if (cookieAuth) setRefreshCookie(res, result.refreshToken);
+  res.status(200).json({
+    success: true,
+    message: result.isNewUser ? 'Google account registered successfully' : 'Google sign-in successful',
+    data: {
+      user: result.user,
+      accessToken: result.accessToken,
+      ...(!cookieAuth && { refreshToken: result.refreshToken }),
+      isNewUser: result.isNewUser,
+    },
+  });
+});
+
 export const refreshToken = asyncHandler(async (req: AuthRequest, res: Response) => {
   const cookieAuth = usesCookieAuth(req);
   const refreshToken = cookieAuth ? req.cookies?.[refreshCookieName] : req.body.refreshToken;

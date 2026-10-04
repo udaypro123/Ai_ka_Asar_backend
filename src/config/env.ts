@@ -53,10 +53,17 @@ export const env = {
   JWT_REFRESH_SECRET: requiredSecret('JWT_REFRESH_SECRET'),
   JWT_ACCESS_EXPIRY: process.env.JWT_ACCESS_EXPIRY || '15m',
   JWT_REFRESH_EXPIRY: process.env.JWT_REFRESH_EXPIRY || '7d',
+  GOOGLE_CLIENT_IDS: (process.env.GOOGLE_CLIENT_IDS || '')
+    .split(',')
+    .map((clientId) => clientId.trim())
+    .filter(Boolean),
   SMTP_HOST: process.env.SMTP_HOST || 'smtp.example.com',
   SMTP_PORT: parseInt(process.env.SMTP_PORT || '587', 10),
   SMTP_USER: process.env.SMTP_USER || '',
   SMTP_PASS: process.env.SMTP_PASS || '',
+  CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || '',
+  CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || '',
+  CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || '',
   FROM_EMAIL: process.env.FROM_EMAIL || 'noreply@aimarg.com',
   FRONTEND_URL: frontendUrl,
   CORS_ORIGIN: corsOrigins,

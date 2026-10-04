@@ -11,6 +11,13 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
+export const googleAuthSchema = z.object({
+  idToken: z.string().min(1, 'Google ID token is required').optional(),
+  accessToken: z.string().min(1, 'Google access token is required').optional(),
+}).refine((credentials) => Boolean(credentials.idToken) !== Boolean(credentials.accessToken), {
+  message: 'Provide exactly one Google token',
+});
+
 export const forgotPasswordSchema = z.object({
   email: z.string().email('Please enter a valid email'),
 });

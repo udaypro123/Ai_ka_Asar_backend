@@ -28,6 +28,7 @@ Start the API with `npm run dev`. The default local address is `http://127.0.0.1
 - `FRONTEND_URL`: web base URL used for password reset links.
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `FROM_EMAIL`: SMTP delivery settings for password reset.
 - `AUTH_COOKIE_SAME_SITE`: `lax` by default. `none` is only allowed for production deployments using HTTPS.
+- `GOOGLE_CLIENT_IDS`: comma-separated Google OAuth client IDs for the web, Android, and iOS clients. The backend verifies ID tokens against these audiences; never put client secrets in either app.
 - `TRUST_PROXY_HOPS`: set to the exact number of trusted reverse proxies in front of Express so rate limits use client IPs correctly.
 - `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`: independent secrets, each at least 32 characters.
 
@@ -42,3 +43,7 @@ Never commit `.env`. The `.env.example` template is safe to commit.
 - `npm test`: run Jest tests
 
 Production deployment also requires a real SMTP provider, an exact production frontend origin, HTTPS, `HOST=0.0.0.0` when running in a container, and managed MongoDB backups.
+
+## Google Sign-in
+
+Create OAuth client IDs in Google Cloud Console for the web origin and each native app (Android package `com.AIMarg.app` and iOS bundle ID `com.AIMarg.app`). Enable the Google identity/OAuth consent configuration and add the deployed web origin to its authorized JavaScript origins. Configure all resulting client IDs in backend `GOOGLE_CLIENT_IDS` (comma-separated), web `NEXT_PUBLIC_GOOGLE_CLIENT_ID`, and the Expo public client ID variables shown in `AIMarg_mobile/.env.example`. Android mobile sign-in sends a Google access token; the backend validates it with Google and checks its audience against `GOOGLE_CLIENT_IDS`. The Android client must match the app's signing certificate SHA-1. iOS mobile sign-in uses an ID token. Keep OAuth client secrets private; these flows use public clients.
