@@ -76,7 +76,17 @@ export const saveUserResume = async (
   const existingUser = await User.findById(userId).select('resume resumePublicId');
   if (!existingUser) throw new AppError('User not found', 404, 'USER_NOT_FOUND');
 
-  const uploaded = await uploadResumeToCloudinary(file.buffer, userId, file.originalname);
+  let uploaded: Awaited<ReturnType<typeof uploadResumeToCloudinary>>;
+  try {
+    uploaded = await uploadResumeToCloudinary(file.buffer, userId, file.originalname);
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+    console.error('Cloudinary resume upload failed', {
+      userId,
+      message: error instanceof Error ? error.message : 'Unknown storage error',
+    });
+    throw new AppError('Resume could not be saved by the file storage service', 502, 'RESUME_STORAGE_FAILED');
+  }
   let user;
   try {
     user = await User.findByIdAndUpdate(
