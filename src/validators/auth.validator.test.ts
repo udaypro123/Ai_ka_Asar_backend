@@ -1,16 +1,17 @@
 import { googleAuthSchema, registerSchema, resetPasswordSchema } from './auth.validator';
 
 describe('authentication request validation', () => {
-  it('does not accept a client-supplied account role', () => {
-    const result = registerSchema.safeParse({
+  it('allows only User and HR roles on manual signup', () => {
+    const signup = {
       name: 'Test User',
       email: 'test@example.com',
       password: 'correct-horse-battery',
-      role: 'ADMIN',
-    });
+    };
 
-    expect(result.success).toBe(true);
-    if (result.success) expect(result.data).not.toHaveProperty('role');
+    expect(registerSchema.safeParse({ ...signup, role: 'HR' }).success).toBe(true);
+    expect(registerSchema.safeParse({ ...signup, role: 'USER' }).success).toBe(true);
+    expect(registerSchema.safeParse({ ...signup, role: 'ADMIN' }).success).toBe(false);
+    expect(registerSchema.parse(signup).role).toBe('USER');
   });
 
   it('requires passwords to be at least eight characters', () => {
@@ -22,6 +23,8 @@ describe('authentication request validation', () => {
     expect(googleAuthSchema.safeParse({ idToken: '' }).success).toBe(false);
     expect(googleAuthSchema.safeParse({ idToken: 'signed-id-token' }).success).toBe(true);
     expect(googleAuthSchema.safeParse({ accessToken: 'google-access-token' }).success).toBe(true);
+    expect(googleAuthSchema.safeParse({ accessToken: 'google-access-token', role: 'HR' }).success).toBe(true);
+    expect(googleAuthSchema.safeParse({ accessToken: 'google-access-token', role: 'ADMIN' }).success).toBe(false);
     expect(googleAuthSchema.safeParse({ idToken: 'signed-id-token', accessToken: 'google-access-token' }).success).toBe(false);
     expect(googleAuthSchema.safeParse({}).success).toBe(false);
   });

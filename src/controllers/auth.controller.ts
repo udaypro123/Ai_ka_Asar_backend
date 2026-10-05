@@ -23,8 +23,8 @@ const setRefreshCookie = (res: Response, token: string): void => {
 };
 
 export const register = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { name, email, password } = req.body;
-  const result = await authService.registerUser({ name, email, password });
+  const { name, email, password, role } = req.body;
+  const result = await authService.registerUser({ name, email, password, role });
   const cookieAuth = usesCookieAuth(req);
   if (cookieAuth) setRefreshCookie(res, result.refreshToken);
   res.status(201).json({

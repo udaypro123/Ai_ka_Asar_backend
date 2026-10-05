@@ -4,6 +4,7 @@ export const registerSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Please enter a valid email'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
+  role: z.enum(['USER', 'HR']).default('USER'),
 });
 
 export const loginSchema = z.object({
@@ -14,6 +15,7 @@ export const loginSchema = z.object({
 export const googleAuthSchema = z.object({
   idToken: z.string().min(1, 'Google ID token is required').optional(),
   accessToken: z.string().min(1, 'Google access token is required').optional(),
+  role: z.enum(['USER', 'HR']).optional(),
 }).refine((credentials) => Boolean(credentials.idToken) !== Boolean(credentials.accessToken), {
   message: 'Provide exactly one Google token',
 });

@@ -47,3 +47,5 @@ Production deployment also requires a real SMTP provider, an exact production fr
 ## Google Sign-in
 
 Create OAuth client IDs in Google Cloud Console for the web origin and each native app (Android package `com.AIMarg.app` and iOS bundle ID `com.AIMarg.app`). Enable the Google identity/OAuth consent configuration and add the deployed web origin to its authorized JavaScript origins. Configure all resulting client IDs in backend `GOOGLE_CLIENT_IDS` (comma-separated), web `NEXT_PUBLIC_GOOGLE_CLIENT_ID`, and the Expo public client ID variables shown in `AIMarg_mobile/.env.example`. Android mobile sign-in sends a Google access token; the backend validates it with Google and checks its audience against `GOOGLE_CLIENT_IDS`. The Android client must match the app's signing certificate SHA-1. iOS mobile sign-in uses an ID token. Keep OAuth client secrets private; these flows use public clients.
+
+Signup requests may select `USER` or `HR`; all other client-supplied roles are rejected. Google signup applies the selected role only to newly created accounts and never changes roles on an existing account.

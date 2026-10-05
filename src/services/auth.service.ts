@@ -28,7 +28,12 @@ const createGoogleSession = async <T extends GoogleUserDocument>(user: T, isNewU
   return { user, accessToken, refreshToken, isNewUser };
 };
 
-export const registerUser = async (data: { name: string; email: string; password: string }) => {
+export const registerUser = async (data: {
+  name: string;
+  email: string;
+  password: string;
+  role?: 'USER' | 'HR';
+}) => {
   const existingUser = await User.findOne({ email: data.email });
   if (existingUser) {
     throw new AppError('Email already registered', 409, 'EMAIL_EXISTS');
@@ -38,7 +43,7 @@ export const registerUser = async (data: { name: string; email: string; password
     name: data.name,
     email: data.email,
     password: data.password,
-    roles: ['USER'],
+    roles: [data.role || 'USER'],
   });
 
   const { accessToken, refreshToken } = generateTokens(user._id.toString());
@@ -70,9 +75,11 @@ export const loginUser = async (email: string, password: string) => {
 export const authenticateGoogleUser = async ({
   idToken,
   accessToken,
+  role,
 }: {
   idToken?: string;
   accessToken?: string;
+  role?: 'USER' | 'HR';
 }) => {
   if (env.GOOGLE_CLIENT_IDS.length === 0) {
     throw new AppError('Google sign-in is not configured', 503, 'GOOGLE_AUTH_NOT_CONFIGURED');
@@ -128,7 +135,7 @@ export const authenticateGoogleUser = async ({
         email,
         googleId: identity.sub,
         isEmailVerified: true,
-        roles: ['USER'],
+        roles: [role || 'USER'],
       });
       return createGoogleSession(createdUser, true);
     } catch (error) {
