@@ -21,9 +21,6 @@ export const createComment = async (
     if (!parent) {
       throw new AppError('Parent comment not found for this post', 404, 'PARENT_COMMENT_NOT_FOUND');
     }
-    if (parent.parentCommentId) {
-      throw new AppError('Replies can only be added to a comment thread', 400, 'INVALID_PARENT_COMMENT');
-    }
     parentCommentId = parent._id;
   }
 

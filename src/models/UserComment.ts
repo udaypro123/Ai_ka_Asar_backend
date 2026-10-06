@@ -3,6 +3,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface IUserComment extends Document {
   targetUserId: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
+  parentCommentId?: mongoose.Types.ObjectId | null;
   userName: string;
   content: string;
   createdAt: Date;
@@ -22,6 +23,11 @@ const UserCommentSchema = new Schema<IUserComment>(
       ref: 'User',
       required: true,
       index: true,
+    },
+    parentCommentId: {
+      type: Schema.Types.ObjectId,
+      ref: 'UserComment',
+      default: null,
     },
     userName: {
       type: String,
