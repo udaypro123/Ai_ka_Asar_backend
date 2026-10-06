@@ -1,15 +1,36 @@
+import mongoose from 'mongoose';
 import { Comment, Post } from '../models';
 import { AppError } from '../utils/appError';
 
-export const createComment = async (userId: string, userName: string, data: { postId: string; content: string }) => {
+export const createComment = async (
+  userId: string,
+  userName: string,
+  data: { postId: string; content: string; parentCommentId?: string }
+) => {
   const post = await Post.findById(data.postId);
   if (!post) {
     throw new AppError('Post not found', 404, 'POST_NOT_FOUND');
   }
 
+  let parentCommentId: mongoose.Types.ObjectId | null = null;
+  if (data.parentCommentId) {
+    const parent = await Comment.findOne({
+      _id: data.parentCommentId,
+      postId: data.postId,
+    });
+    if (!parent) {
+      throw new AppError('Parent comment not found for this post', 404, 'PARENT_COMMENT_NOT_FOUND');
+    }
+    if (parent.parentCommentId) {
+      throw new AppError('Replies can only be added to a comment thread', 400, 'INVALID_PARENT_COMMENT');
+    }
+    parentCommentId = parent._id;
+  }
+
   const comment = await Comment.create({
     postId: data.postId,
     userId,
+    parentCommentId,
     userName,
     content: data.content,
   });
@@ -21,6 +42,7 @@ export const createComment = async (userId: string, userName: string, data: { po
     _id: comment._id,
     postId: comment.postId,
     userId: comment.userId,
+    parentCommentId: comment.parentCommentId?.toString() ?? null,
     userName: comment.userName,
     content: comment.content,
     createdAt: comment.createdAt,
@@ -37,6 +59,7 @@ export const getComments = async (postId: string) => {
     _id: comment._id,
     postId: comment.postId,
     userId: comment.userId,
+    parentCommentId: comment.parentCommentId?.toString() ?? null,
     userName: comment.userName,
     content: comment.content,
     createdAt: comment.createdAt,

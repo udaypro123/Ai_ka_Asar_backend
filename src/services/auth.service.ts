@@ -85,7 +85,12 @@ export const authenticateGoogleUser = async ({
     throw new AppError('Google sign-in is not configured', 503, 'GOOGLE_AUTH_NOT_CONFIGURED');
   }
 
-  let identity: { sub?: string; email?: string; email_verified?: boolean; name?: string } | undefined;
+  let identity: {
+    sub?: string;
+    email?: string;
+    email_verified?: boolean | string;
+    name?: string;
+  } | undefined;
   if (idToken) {
     try {
       const ticket = await googleClient.verifyIdToken({
@@ -113,7 +118,9 @@ export const authenticateGoogleUser = async ({
     }
   }
 
-  if (!identity?.sub || !identity.email || identity.email_verified !== true) {
+  const emailIsVerified =
+    identity?.email_verified === true || identity?.email_verified === 'true';
+  if (!identity?.sub || !identity.email || !emailIsVerified) {
     throw new AppError('Google account must have a verified email address', 401, 'GOOGLE_EMAIL_NOT_VERIFIED');
   }
 
