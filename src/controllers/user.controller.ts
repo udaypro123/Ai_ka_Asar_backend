@@ -7,9 +7,11 @@ import { User } from '../models/User';
 import fs from 'fs/promises';
 import path from 'path';
 import {
-  createResumeDownloadUrl,
+  createStoredFileDownloadUrl,
+  getLocalStoredFilePath,
+  isStorageProvider,
   verifyLocalResumeDownloadToken,
-} from '../services/cloudinary.service';
+} from '../services/storage.service';
 import { env } from '../config/env';
 
 export const getProfile = asyncHandler(async (req: AuthRequest, res: Response) => {
@@ -95,20 +97,38 @@ export const uploadResume = asyncHandler(async (req: AuthRequest, res: Response)
 });
 
 export const downloadResume = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const user = await User.findById(req.user!._id).select('resume resumePublicId');
+  const user = await User.findById(req.user!._id)
+    .select('resume resumePublicId +resumeStorageKey +resumeStorageProvider');
   if (!user?.resume) {
     throw new AppError('No resume found', 404, 'RESUME_NOT_FOUND');
   }
 
+  if (user.resumeStorageKey && user.resumeStorageProvider && user.resumeStorageProvider !== 'local') {
+    if (!isStorageProvider(user.resumeStorageProvider)) {
+      throw new AppError('Resume storage provider is not supported', 500, 'UNSUPPORTED_STORAGE_PROVIDER');
+    }
+    const downloadUrl = await createStoredFileDownloadUrl(
+      { key: user.resumeStorageKey, provider: user.resumeStorageProvider },
+      user.resume
+    );
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.redirect(302, downloadUrl);
+    return;
+  }
   if (user.resumePublicId) {
-    const downloadUrl = createResumeDownloadUrl(user.resumePublicId, user.resume);
+    const downloadUrl = await createStoredFileDownloadUrl(
+      { key: user.resumePublicId, provider: 'cloudinary' },
+      user.resume
+    );
     res.setHeader('Cache-Control', 'private, no-store');
     res.redirect(302, downloadUrl);
     return;
   }
 
   const uploadDirectory = path.resolve(process.cwd(), 'uploads');
-  const filePath = path.resolve(uploadDirectory, path.basename(user.resume));
+  const filePath = user.resumeStorageProvider === 'local' && user.resumeStorageKey
+    ? getLocalStoredFilePath(user.resumeStorageKey)
+    : path.resolve(uploadDirectory, path.basename(user.resume));
   if (!filePath.startsWith(`${uploadDirectory}${path.sep}`)) {
     throw new AppError('Resume not found', 404, 'RESUME_NOT_FOUND');
   }
@@ -142,15 +162,32 @@ export const downloadSharedResume = asyncHandler(async (req: AuthRequest, res: R
     throw new AppError('Resume download link is invalid or expired', 401, 'INVALID_RESUME_DOWNLOAD_LINK');
   }
 
-  const user = await User.findById(userId).select('resume resumePublicId');
+  const user = await User.findById(userId)
+    .select('resume resumePublicId +resumeStorageKey +resumeStorageProvider');
   if (!user?.resume) throw new AppError('No resume found', 404, 'RESUME_NOT_FOUND');
+  if (user.resumeStorageKey && user.resumeStorageProvider && user.resumeStorageProvider !== 'local') {
+    if (!isStorageProvider(user.resumeStorageProvider)) {
+      throw new AppError('Resume storage provider is not supported', 500, 'UNSUPPORTED_STORAGE_PROVIDER');
+    }
+    const downloadUrl = await createStoredFileDownloadUrl(
+      { key: user.resumeStorageKey, provider: user.resumeStorageProvider },
+      user.resume
+    );
+    res.redirect(302, downloadUrl);
+    return;
+  }
   if (user.resumePublicId) {
-    res.redirect(302, createResumeDownloadUrl(user.resumePublicId, user.resume));
+    res.redirect(302, await createStoredFileDownloadUrl(
+      { key: user.resumePublicId, provider: 'cloudinary' },
+      user.resume
+    ));
     return;
   }
 
   const uploadDirectory = path.resolve(process.cwd(), 'uploads');
-  const filePath = path.resolve(uploadDirectory, path.basename(user.resume));
+  const filePath = user.resumeStorageProvider === 'local' && user.resumeStorageKey
+    ? getLocalStoredFilePath(user.resumeStorageKey)
+    : path.resolve(uploadDirectory, path.basename(user.resume));
   if (!filePath.startsWith(`${uploadDirectory}${path.sep}`)) {
     throw new AppError('Resume not found', 404, 'RESUME_NOT_FOUND');
   }

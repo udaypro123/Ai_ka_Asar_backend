@@ -26,6 +26,8 @@ export interface IUser extends Document {
   githubUrl?: string;
   resume?: string;
   resumePublicId?: string;
+  resumeStorageKey?: string;
+  resumeStorageProvider?: string;
   privacySettings: {
     profileDiscoverable: boolean;
   };
@@ -149,6 +151,16 @@ const UserSchema = new Schema<IUser>(
       type: String,
       trim: true,
     },
+    resumeStorageKey: {
+      type: String,
+      trim: true,
+      select: false,
+    },
+    resumeStorageProvider: {
+      type: String,
+      trim: true,
+      select: false,
+    },
     privacySettings: {
       profileDiscoverable: {
         type: Boolean,
@@ -212,6 +224,8 @@ UserSchema.set('toJSON', {
     delete safeUser.password;
     delete safeUser.googleId;
     delete safeUser.resumePublicId;
+    delete safeUser.resumeStorageKey;
+    delete safeUser.resumeStorageProvider;
     delete safeUser.resetPasswordToken;
     delete safeUser.resetPasswordExpires;
     delete safeUser.emailVerificationToken;

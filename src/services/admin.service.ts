@@ -103,7 +103,8 @@ export const getPublicUsers = async (excludeUserId?: string) => {
 };
 
 export const getUserById = async (userId: string) => {
-  const user = await User.findById(userId).select('-password -resumePublicId');
+  const user = await User.findById(userId)
+    .select('-password -resumePublicId -resumeStorageKey -resumeStorageProvider');
   if (!user) throw new Error('User not found');
   return user.toObject();
 };

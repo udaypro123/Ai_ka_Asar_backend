@@ -29,6 +29,8 @@ Start the API with `npm run dev`. The default local address is `http://127.0.0.1
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `FROM_EMAIL`: SMTP delivery settings for password reset.
 - `AUTH_COOKIE_SAME_SITE`: `lax` by default. `none` is only allowed for production deployments using HTTPS.
 - `GOOGLE_CLIENT_IDS`: comma-separated Google OAuth client IDs for the web, Android, and iOS clients. The backend verifies ID tokens against these audiences; never put client secrets in either app.
+- `STORAGE_PROVIDER`: `local` (default) or `cloudinary`.
+- `STORAGE_ACCOUNT`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`: provider credentials. For Cloudinary, use the cloud name as the account, API key as access key, and API secret as secret key.
 - `TRUST_PROXY_HOPS`: set to the exact number of trusted reverse proxies in front of Express so rate limits use client IPs correctly.
 - `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`: independent secrets, each at least 32 characters.
 
@@ -43,6 +45,21 @@ Never commit `.env`. The `.env.example` template is safe to commit.
 - `npm test`: run Jest tests
 
 Production deployment also requires a real SMTP provider, an exact production frontend origin, HTTPS, `HOST=0.0.0.0` when running in a container, and managed MongoDB backups.
+
+## File storage
+
+Resume files use a provider adapter selected by `STORAGE_PROVIDER`. Local disk
+storage works for development. Cloudinary uses `STORAGE_ACCOUNT`,
+`STORAGE_ACCESS_KEY`, and `STORAGE_SECRET_KEY`. Each uploaded file stores its
+provider and key, so existing Cloudinary files remain downloadable. Supporting
+another provider requires an adapter implementing upload, delete, and download;
+changing credential variable names alone cannot make a different provider
+compatible.
+
+Legacy `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and
+`CLOUDINARY_API_SECRET` remain accepted as a migration fallback. Move the
+values into the generic storage variables and remove the legacy names after
+deploying the updated configuration.
 
 ## Google Sign-in
 

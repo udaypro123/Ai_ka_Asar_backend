@@ -18,13 +18,36 @@ import fs from 'fs/promises';
 import path from 'path';
 import {
   createLocalResumeDownloadToken,
-  createResumeDownloadUrl,
-  deleteResume,
-  uploadResume as uploadResumeToCloudinary,
-} from './cloudinary.service';
+  createStoredFileDownloadUrl,
+  deleteStoredFile,
+  getLocalStoredFilePath,
+  isStorageProvider,
+  uploadFile,
+  type StoredFile,
+} from './storage.service';
+
+const getStoredResume = (user: {
+  resumePublicId?: string;
+  resumeStorageKey?: string;
+  resumeStorageProvider?: string;
+}): StoredFile | undefined => {
+  if (user.resumeStorageKey && user.resumeStorageProvider) {
+    if (!isStorageProvider(user.resumeStorageProvider)) {
+      throw new AppError('Resume storage provider is not supported', 500, 'UNSUPPORTED_STORAGE_PROVIDER');
+    }
+    return {
+      key: user.resumeStorageKey,
+      provider: user.resumeStorageProvider,
+    };
+  }
+  if (user.resumePublicId) {
+    return { key: user.resumePublicId, provider: 'cloudinary' };
+  }
+  return undefined;
+};
 
 export const getUserProfile = async (userId: string) => {
-  const user = await User.findById(userId).select('-resumePublicId');
+  const user = await User.findById(userId).select('-resumePublicId -resumeStorageKey -resumeStorageProvider');
   if (!user) {
     throw new Error('User not found');
   }
@@ -38,7 +61,7 @@ export const getResumeDownloadUrl = async (
   targetUserId: string
 ): Promise<string> => {
   const targetUser = await User.findById(targetUserId)
-    .select('resume resumePublicId privacySettings.profileDiscoverable');
+    .select('resume resumePublicId +resumeStorageKey +resumeStorageProvider privacySettings.profileDiscoverable');
   if (!targetUser) throw new AppError('User not found', 404, 'USER_NOT_FOUND');
   if (!targetUser.resume) throw new AppError('No resume found', 404, 'RESUME_NOT_FOUND');
 
@@ -53,8 +76,9 @@ export const getResumeDownloadUrl = async (
     throw new AppError('This resume is not available', 403, 'RESUME_NOT_AVAILABLE');
   }
 
-  if (targetUser.resumePublicId) {
-    return createResumeDownloadUrl(targetUser.resumePublicId, targetUser.resume);
+  const storedResume = getStoredResume(targetUser);
+  if (storedResume && storedResume.provider !== 'local') {
+    return createStoredFileDownloadUrl(storedResume, targetUser.resume);
   }
 
   const token = createLocalResumeDownloadToken(targetUserId);
@@ -73,15 +97,16 @@ export const saveUserResume = async (
   userId: string,
   file: { buffer: Buffer; originalname: string }
 ) => {
-  const existingUser = await User.findById(userId).select('resume resumePublicId');
+  const existingUser = await User.findById(userId)
+    .select('resume resumePublicId +resumeStorageKey +resumeStorageProvider');
   if (!existingUser) throw new AppError('User not found', 404, 'USER_NOT_FOUND');
 
-  let uploaded: Awaited<ReturnType<typeof uploadResumeToCloudinary>>;
+  let uploaded: StoredFile;
   try {
-    uploaded = await uploadResumeToCloudinary(file.buffer, userId, file.originalname);
+    uploaded = await uploadFile(file.buffer, userId, file.originalname);
   } catch (error) {
     if (error instanceof AppError) throw error;
-    console.error('Cloudinary resume upload failed', {
+    console.error('Resume storage upload failed', {
       userId,
       message: error instanceof Error ? error.message : 'Unknown storage error',
     });
@@ -91,24 +116,32 @@ export const saveUserResume = async (
   try {
     user = await User.findByIdAndUpdate(
       userId,
-      { resume: file.originalname, resumePublicId: uploaded.public_id },
+      {
+        $set: {
+          resume: file.originalname,
+          resumeStorageKey: uploaded.key,
+          resumeStorageProvider: uploaded.provider,
+        },
+        $unset: { resumePublicId: 1 },
+      },
       { new: true }
     ).select('-password');
     if (!user) throw new AppError('User not found', 404, 'USER_NOT_FOUND');
   } catch (error) {
     try {
-      await deleteResume(uploaded.public_id);
+      await deleteStoredFile(uploaded);
     } catch (cleanupError) {
-      console.error('Failed to remove an unlinked Cloudinary resume upload', cleanupError);
+      console.error('Failed to remove an unlinked resume upload', cleanupError);
     }
     throw error;
   }
 
-  if (existingUser.resumePublicId) {
+  const existingStoredResume = getStoredResume(existingUser);
+  if (existingStoredResume) {
     try {
-      await deleteResume(existingUser.resumePublicId);
+      await deleteStoredFile(existingStoredResume);
     } catch (error) {
-      console.error('Failed to remove replaced Cloudinary resume', { error, userId });
+      console.error('Failed to remove replaced resume', { error, userId });
     }
   } else if (existingUser.resume && !/^https?:\/\//i.test(existingUser.resume)) {
     const uploadDirectory = path.resolve(process.cwd(), 'uploads');
@@ -121,7 +154,8 @@ export const saveUserResume = async (
 };
 
 export const deleteUserAccount = async (userId: string) => {
-  const user = await User.findById(userId).select('resume resumePublicId');
+  const user = await User.findById(userId)
+    .select('resume resumePublicId +resumeStorageKey +resumeStorageProvider');
   if (!user) throw new AppError('User not found', 404, 'USER_NOT_FOUND');
 
   const ownedPostIds = await Post.find({ userId: user._id }).distinct('_id');
@@ -130,8 +164,9 @@ export const deleteUserAccount = async (userId: string) => {
     { $group: { _id: '$postId', count: { $sum: 1 } } },
   ]);
   if (user.resume) {
-    if (user.resumePublicId) {
-      await deleteResume(user.resumePublicId);
+    const storedResume = getStoredResume(user);
+    if (storedResume) {
+      await deleteStoredFile(storedResume);
     } else if (!/^https?:\/\//i.test(user.resume)) {
       const uploadDirectory = path.resolve(process.cwd(), 'uploads');
       const resumePath = path.resolve(uploadDirectory, path.basename(user.resume));

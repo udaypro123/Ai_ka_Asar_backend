@@ -42,6 +42,18 @@ if (cookieSameSite === 'none' && nodeEnv !== 'production') {
   throw new Error('AUTH_COOKIE_SAME_SITE=none requires secure production cookies');
 }
 
+const legacyCloudinaryConfigured = Boolean(
+  process.env.CLOUDINARY_CLOUD_NAME ||
+  process.env.CLOUDINARY_API_KEY ||
+  process.env.CLOUDINARY_API_SECRET
+);
+const storageProvider = (
+  process.env.STORAGE_PROVIDER || (legacyCloudinaryConfigured ? 'cloudinary' : 'local')
+).toLowerCase();
+if (!['local', 'cloudinary'].includes(storageProvider)) {
+  throw new Error('STORAGE_PROVIDER must be local or cloudinary');
+}
+
 export const env = {
   NODE_ENV: nodeEnv,
   isDevelopment: nodeEnv === 'development',
@@ -61,9 +73,10 @@ export const env = {
   SMTP_PORT: parseInt(process.env.SMTP_PORT || '587', 10),
   SMTP_USER: process.env.SMTP_USER || '',
   SMTP_PASS: process.env.SMTP_PASS || '',
-  CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || '',
-  CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || '',
-  CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || '',
+  STORAGE_PROVIDER: storageProvider as 'local' | 'cloudinary',
+  STORAGE_ACCOUNT: process.env.STORAGE_ACCOUNT || process.env.CLOUDINARY_CLOUD_NAME || '',
+  STORAGE_ACCESS_KEY: process.env.STORAGE_ACCESS_KEY || process.env.CLOUDINARY_API_KEY || '',
+  STORAGE_SECRET_KEY: process.env.STORAGE_SECRET_KEY || process.env.CLOUDINARY_API_SECRET || '',
   FROM_EMAIL: process.env.FROM_EMAIL || 'noreply@aimarg.com',
   FRONTEND_URL: frontendUrl,
   CORS_ORIGIN: corsOrigins,
